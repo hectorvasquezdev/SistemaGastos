@@ -15,13 +15,48 @@
 --    los datos visibles (nombre, iniciales, racha, etc.)
 -- ------------------------------------------------------------
 create table if not exists profiles (
-  id          uuid primary key references auth.users(id) on delete cascade,
-  name        text        not null default '',
-  email       text        not null default '',
-  initials    text        not null default '',
-  streak      integer     not null default 0,
-  created_at  timestamptz not null default now()
+  id           uuid primary key references auth.users(id) on delete cascade,
+  name         text        not null default '',
+  email        text        not null default '',
+  initials     text        not null default '',
+  streak       integer     not null default 0,
+  avatar_url   text,
+  accent_color text        not null default 'teal',
+  created_at   timestamptz not null default now()
 );
+
+-- ============================================================
+--  STORAGE: bucket para avatares de perfil
+--  Ejecutar en: Supabase → SQL Editor
+-- ============================================================
+-- 1. Crear bucket público "avatars"
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+-- 2. Política: el usuario solo puede subir/actualizar su propia carpeta
+drop policy if exists "avatar upload" on storage.objects;
+create policy "avatar upload" on storage.objects
+  for insert with check (
+    bucket_id = 'avatars' AND auth.uid()::text = (string_to_array(name, '/'))[1]
+  );
+
+drop policy if exists "avatar update" on storage.objects;
+create policy "avatar update" on storage.objects
+  for update using (
+    bucket_id = 'avatars' AND auth.uid()::text = (string_to_array(name, '/'))[1]
+  );
+
+drop policy if exists "avatar read" on storage.objects;
+create policy "avatar read" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+-- ============================================================
+--  MIGRACIÓN: si ya tienes la tabla profiles creada antes,
+--  ejecuta estas líneas por separado para agregar las columnas
+-- ============================================================
+-- alter table profiles add column if not exists avatar_url   text;
+-- alter table profiles add column if not exists accent_color text not null default 'teal';
 
 -- ------------------------------------------------------------
 -- 2) CATEGORÍAS  (Alimentación, Alquiler, Transporte, …)

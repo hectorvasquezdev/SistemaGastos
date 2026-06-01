@@ -2,18 +2,20 @@
 import { useState } from 'react';
 import Icon from './Icons';
 import { useApp } from '@/context/AppContext';
+import { applyAccent } from '@/lib/palettes';
 
 const NAV = [
   { id:'dash',    label:'Inicio',        icon:'home' },
   { id:'add',     label:'Registrar',     icon:'plus' },
   { id:'history', label:'Historial',     icon:'list' },
   { id:'budget',  label:'Presupuesto',   icon:'target' },
+  { id:'cats',    label:'Categorías',    icon:'tag' },
   { id:'cash',    label:'Efectivo',      icon:'cash' },
   { id:'yape',    label:'Importar Yape', icon:'upload' },
   { id:'reports', label:'Reporte',       icon:'report' },
   { id:'achiev',  label:'Logros',        icon:'trophy' },
 ];
-const MOBILE_PRIMARY = ['dash','history','add','cash','achiev'];
+const MOBILE_PRIMARY = ['dash','history','add','cats','achiev'];
 
 function useTheme() {
   const [theme, setTheme] = useState(() => {
@@ -25,6 +27,8 @@ function useTheme() {
       const next = t === 'light' ? 'dark' : 'light';
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('gastos_theme', next);
+      const accent = localStorage.getItem('gastos_accent') || 'teal';
+      applyAccent(accent);
       return next;
     });
   };
@@ -60,15 +64,31 @@ function MonthPicker() {
   );
 }
 
-function UserMenu({ onLogout }) {
+function UserAvatar({ profile, user, size = 36 }) {
+  const name     = profile?.name || user?.email?.split('@')[0] || 'U';
+  const initials = profile?.initials || name.slice(0, 2).toUpperCase();
+  if (profile?.avatar_url) {
+    return (
+      <img src={profile.avatar_url} alt="avatar"
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flex: 'none', display: 'block' }} />
+    );
+  }
+  return (
+    <span style={{ width: size, height: size, borderRadius: '50%', background: 'var(--primary)',
+      color: 'var(--on-primary)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 14, flex: 'none' }}>
+      {initials}
+    </span>
+  );
+}
+
+function UserMenu({ onLogout, onNav }) {
   const { profile, user } = useApp();
   const [open, setOpen] = useState(false);
-  const name     = profile?.name || user?.email?.split('@')[0] || 'Usuario';
-  const initials = profile?.initials || name.slice(0,2).toUpperCase();
+  const name = profile?.name || user?.email?.split('@')[0] || 'Usuario';
   return (
     <div style={{ position:'relative' }}>
       <button onClick={() => setOpen(o => !o)} className="row" style={{ gap:9, background:'none', border:'none', cursor:'pointer', padding:'4px 6px 4px 4px', borderRadius:99 }}>
-        <span style={{ width:36, height:36, borderRadius:'50%', background:'var(--primary)', color:'var(--on-primary)', display:'grid', placeItems:'center', fontWeight:800, fontSize:14 }}>{initials}</span>
+        <UserAvatar profile={profile} user={user} />
         <span className="user-name" style={{ fontWeight:700, fontSize:14 }}>{name.split(' ')[0]}</span>
         <Icon name="chevD" size={15} color="var(--muted)" />
       </button>
@@ -80,6 +100,10 @@ function UserMenu({ onLogout }) {
             <div className="tiny muted">{user?.email}</div>
           </div>
           <hr className="hr" />
+          <button className="btn btn-sm" style={{ width:'100%', justifyContent:'flex-start' }}
+            onClick={() => { onNav('settings'); setOpen(false); }}>
+            <Icon name="settings" size={16} />Configuración
+          </button>
           <button className="btn btn-sm" style={{ width:'100%', justifyContent:'flex-start', color:'var(--danger)' }}
             onClick={() => { onLogout(); setOpen(false); }}>
             <Icon name="logout" size={16} />Cerrar sesión
@@ -174,7 +198,8 @@ export default function AppShell({ view, onNav, children }) {
   const [theme, toggleTheme] = useTheme();
   const [more, setMore] = useState(false);
 
-  const title = (NAV.find(n => n.id === view) || {}).label;
+  const EXTRA_TITLES = { settings: 'Configuración' };
+  const title = (NAV.find(n => n.id === view) || {}).label || EXTRA_TITLES[view] || '';
 
   return (
     <div style={{ display:'flex', minHeight:'100vh', background:'var(--bg)' }}>
@@ -193,7 +218,7 @@ export default function AppShell({ view, onNav, children }) {
           </div>
           <div className="row" style={{ gap:10 }}>
             <MonthPicker />
-            <UserMenu onLogout={logout} />
+            <UserMenu onLogout={logout} onNav={onNav} />
           </div>
         </header>
 

@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { supabase } from '@/lib/supabaseClient';
 import * as store from '@/lib/store';
 import { stats as calcStats, alerts as calcAlerts, recommendations as calcRecs, MONTH_NAMES, METHODS, METHOD_META, money, money0 } from '@/lib/calculos';
+import { applyAccent } from '@/lib/palettes';
 
 const AppCtx = createContext(null);
 
@@ -101,7 +102,13 @@ export function AppProvider({ children }) {
 
   const loadProfile = useCallback(async (uid) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', uid).single();
-    if (data) setProfile(data);
+    if (data) {
+      setProfile(data);
+      if (data.accent_color) {
+        if (typeof window !== 'undefined') localStorage.setItem('gastos_accent', data.accent_color);
+        applyAccent(data.accent_color);
+      }
+    }
   }, []);
 
   // ── auth listener ──────────────────────────────────────────────
@@ -227,6 +234,11 @@ export function AppProvider({ children }) {
     return catWithBudget;
   }, [user, month, year]);
 
+  const updateCategory = useCallback(async (id, patch) => {
+    await store.updateCategoria(id, patch);
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  }, []);
+
   const deleteCategory = useCallback(async (id) => {
     await store.deleteCategoria(id);
     setCategories(prev => prev.filter(c => c.id !== id));
@@ -245,6 +257,12 @@ export function AppProvider({ children }) {
   const deleteIncome = useCallback(async (id) => {
     await store.deleteIngreso(id);
     setIncomes(prev => prev.filter(i => i.id !== id));
+  }, []);
+
+  const updateProfile = useCallback(async (patch) => {
+    const data = await store.updatePerfil(patch);
+    setProfile(prev => ({ ...prev, ...patch }));
+    return data;
   }, []);
 
   const logout = useCallback(async () => {
@@ -267,9 +285,10 @@ export function AppProvider({ children }) {
     catById, monthLabel,
     money, money0,
     METHODS, METHOD_META, MONTH_NAMES,
+    updateProfile,
     addExpense, addExpenses, updateExpense, deleteExpense,
     setBudget,
-    addCategory, deleteCategory,
+    addCategory, updateCategory, deleteCategory,
     addIncome, updateIncome, deleteIncome,
     logout, reload,
   };

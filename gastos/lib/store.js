@@ -34,6 +34,13 @@ export async function addCategoria({ slug, name, icon, color }) {
   if (error) throw error;
   return data;
 }
+export async function updateCategoria(id, patch) {
+  const { data, error } = await supabase
+    .from('categories').update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteCategoria(id) {
   const { error } = await supabase.from('categories').delete().eq('id', id);
   if (error) throw error;
@@ -133,6 +140,25 @@ export async function getResumenMeses(meses) {
     return { month, year, total };
   }));
   return results;
+}
+
+// ---------- PERFIL ----------
+export async function updatePerfil(patch) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('profiles').update(patch).eq('id', user.id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function uploadAvatar(file) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const path = `${user.id}/avatar.${ext}`;
+  const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  return data.publicUrl + '?t=' + Date.now();
 }
 
 // ---------- LOGROS ----------

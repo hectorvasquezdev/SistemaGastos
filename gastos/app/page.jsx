@@ -13,15 +13,20 @@ import Cash from '@/components/Cash';
 import ImportYape from '@/components/ImportYape';
 import Reports from '@/components/Reports';
 import Gamification from '@/components/Gamification';
+import Categories from '@/components/Categories';
+import Settings from '@/components/Settings';
+import { applyAccent } from '@/lib/palettes';
 
 function AppContent() {
   const { user, loading } = useApp();
   const [view, setView]   = useState('dash');
 
-  // apply saved theme on mount
+  // apply saved theme + accent color on mount
   useEffect(() => {
-    const saved = localStorage.getItem('gastos_theme') || 'light';
-    document.documentElement.setAttribute('data-theme', saved);
+    const savedTheme = localStorage.getItem('gastos_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    const savedAccent = localStorage.getItem('gastos_accent') || 'teal';
+    applyAccent(savedAccent);
   }, []);
 
   // reset scroll on view change
@@ -51,10 +56,12 @@ function AppContent() {
     add:     <RegisterExpense onNav={nav} />,
     history: <History />,
     budget:  <Budget />,
+    cats:    <Categories />,
     cash:    <Cash onNav={nav} />,
     yape:    <ImportYape onNav={nav} />,
     reports: <Reports onNav={nav} />,
-    achiev:  <Gamification />,
+    achiev:   <Gamification />,
+    settings: <Settings />,
   };
 
   return (
