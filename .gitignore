@@ -1,2 +1,17 @@
-# Local Netlify folder
+# Netlify CLI cache
 .netlify
+
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+
+# Environment variables
+.env.local
+.env*.local
+
+# OS files
+.DS_Store
+Thumbs.db
