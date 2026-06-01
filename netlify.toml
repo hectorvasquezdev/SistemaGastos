@@ -1,7 +1,7 @@
 [build]
   base      = "gastos"
   command   = "npm run build"
-  publish   = "gastos/out"
+  publish   = "out"
 
 [build.environment]
   NODE_VERSION = "20"
