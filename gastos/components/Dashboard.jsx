@@ -16,7 +16,7 @@ function Hero({ s, onNav }) {
       : { emoji:'👀', title:'Cuidado con el ritmo', text:`Ya comprometiste el ${s.pctSueldo}% de tu sueldo. Revisa tus gastos grandes.` };
 
   return (
-    <div className="card" style={{ overflow:'hidden', display:'grid', gridTemplateColumns:'1.4fr 1fr', border:'none', background:'linear-gradient(135deg, var(--primary-700), var(--primary) 70%)', color:'#fff' }}>
+    <div className="card hero-card" style={{ overflow:'hidden', border:'none', background:'linear-gradient(135deg, var(--primary-700), var(--primary) 70%)', color:'#fff' }}>
       <div style={{ padding:'26px 28px' }}>
         <div className="row" style={{ gap:10, marginBottom:14 }}>
           <span style={{ fontSize:30 }}>{msg.emoji}</span>
@@ -33,7 +33,7 @@ function Hero({ s, onNav }) {
           <button className="btn btn-lg" style={{ background:'rgba(255,255,255,.16)', color:'#fff' }} onClick={() => onNav('reports')}>Ver reporte</button>
         </div>
       </div>
-      <div style={{ padding:'26px 28px', display:'grid', placeItems:'center', background:'rgba(255,255,255,.07)', borderLeft:'1px solid rgba(255,255,255,.12)' }}>
+      <div className="hero-ring" style={{ padding:'26px 28px', display:'grid', placeItems:'center', background:'rgba(255,255,255,.07)', borderLeft:'1px solid rgba(255,255,255,.12)' }}>
         <Ring pct={s.used} size={132} stroke={13} color="#fff" track="rgba(255,255,255,.22)">
           <div className="col" style={{ alignItems:'center' }}>
             <span className="num" style={{ fontSize:30, fontWeight:800 }}>{s.used}%</span>
@@ -46,10 +46,14 @@ function Hero({ s, onNav }) {
 }
 
 export default function Dashboard({ onNav }) {
-  const { stats, alerts, money0, money } = useApp();
+  const { stats, alerts, money0, money, profile, user } = useApp();
   const { setAppStats } = useMascota();
   const s  = stats();
   const al = alerts();
+
+  const firstName  = (profile?.name || user?.email?.split('@')[0] || '').split(' ')[0];
+  const hour       = new Date().getHours();
+  const greeting   = hour < 12 ? '¡Buenos días' : hour < 19 ? '¡Buenas tardes' : '¡Buenas noches';
 
   useEffect(() => { setAppStats(s); }, [s.spent, s.used, s.ahorroReal]);
 
@@ -63,6 +67,12 @@ export default function Dashboard({ onNav }) {
 
   return (
     <div className="view-in col" style={{ gap:20 }}>
+      {firstName && (
+        <div className="row" style={{ gap:8, alignItems:'center' }}>
+          <span style={{ fontSize:22 }}>👋</span>
+          <span style={{ fontSize:17, fontWeight:700 }}>{greeting}, {firstName}!</span>
+        </div>
+      )}
       <Hero s={s} onNav={onNav} />
 
       {/* KPI cards */}

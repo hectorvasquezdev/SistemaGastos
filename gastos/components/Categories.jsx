@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { useToast } from '@/components/UI';
 import { Modal } from '@/components/UI';
 import Icon from './Icons';
+import { suggestEmoji } from '@/lib/emojiSuggestions';
 
 const EMOJI_OPTIONS = [
   '🍽️','🏠','🚌','💡','🛍️','🐷','✨','✈️','🎉','👗',
@@ -21,10 +22,24 @@ function CategoryModal({ cat, onClose }) {
   const pushToast = useToast();
   const isEdit = !!cat;
 
-  const [name,  setName]  = useState(cat?.name  || '');
-  const [icon,  setIcon]  = useState(cat?.icon  || '✨');
-  const [color, setColor] = useState(cat?.color || '#64748b');
-  const [busy,  setBusy]  = useState(false);
+  const [name,          setName]          = useState(cat?.name  || '');
+  const [icon,          setIcon]          = useState(cat?.icon  || '✨');
+  const [color,         setColor]         = useState(cat?.color || '#64748b');
+  const [busy,          setBusy]          = useState(false);
+  const [autoSuggested, setAutoSuggested] = useState(!cat);
+
+  const handleNameChange = (val) => {
+    setName(val);
+    if (autoSuggested) {
+      const s = suggestEmoji(val);
+      if (s) setIcon(s);
+    }
+  };
+
+  const handleIconClick = (e) => {
+    setIcon(e);
+    setAutoSuggested(false);
+  };
 
   const save = async () => {
     if (!name.trim()) {
@@ -53,16 +68,23 @@ function CategoryModal({ cat, onClose }) {
       <div className="col" style={{ gap: 16 }}>
         <div className="field">
           <label className="label">Nombre</label>
-          <input className="input" value={name} onChange={e => setName(e.target.value)}
+          <input className="input" value={name} onChange={e => handleNameChange(e.target.value)}
             placeholder="Ej. Viajes, Salud, Entretenimiento…" autoFocus
             onKeyDown={e => e.key === 'Enter' && save()} />
         </div>
 
         <div className="field">
-          <label className="label">Ícono</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 6 }}>
+          <div className="row between" style={{ marginBottom: 6 }}>
+            <label className="label" style={{ margin: 0 }}>Ícono</label>
+            {autoSuggested && icon !== '✨' && (
+              <span className="tiny" style={{ color: 'var(--primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                ✨ Sugerido automáticamente
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(36px, 1fr))', gap: 6 }}>
             {EMOJI_OPTIONS.map(e => (
-              <button key={e} onClick={() => setIcon(e)} className="btn"
+              <button key={e} onClick={() => handleIconClick(e)} className="btn"
                 style={{ fontSize: 19, padding: 6, borderRadius: 10,
                   background: icon === e ? 'var(--primary-tint)' : 'var(--surface-2)',
                   border: `1.5px solid ${icon === e ? 'var(--primary)' : 'var(--border)'}` }}>

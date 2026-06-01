@@ -5,6 +5,7 @@ import { useToast } from '@/components/UI';
 import Icon from './Icons';
 import { PALETTES, applyAccent } from '@/lib/palettes';
 import * as store from '@/lib/store';
+import { supabase } from '@/lib/supabaseClient';
 
 function Avatar({ profile, user, size = 80 }) {
   const name     = profile?.name || user?.email?.split('@')[0] || 'U';
@@ -22,6 +23,87 @@ function Avatar({ profile, user, size = 80 }) {
       color: 'var(--on-primary)', display: 'grid', placeItems: 'center',
       fontSize: size * 0.35, fontWeight: 800, flex: 'none' }}>
       {initials}
+    </div>
+  );
+}
+
+function PasswordSection({ user }) {
+  const pushToast = useToast();
+  const [curr,  setCurr]  = useState('');
+  const [newP,  setNewP]  = useState('');
+  const [conf,  setConf]  = useState('');
+  const [errors, setErrors] = useState({});
+  const [busy,  setBusy]  = useState(false);
+
+  const validate = () => {
+    const e = {};
+    if (!curr)                          e.curr = 'Ingresa tu contraseña actual';
+    if (newP.length < 6)                e.newP = 'Mínimo 6 caracteres';
+    if (newP !== conf)                  e.conf = 'Las contraseñas no coinciden';
+    if (curr && newP && curr === newP)  e.newP = 'La nueva contraseña debe ser diferente a la actual';
+    return e;
+  };
+
+  const submit = async () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    setBusy(true);
+    setErrors({});
+    try {
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email: user.email, password: curr });
+      if (authErr) { setErrors({ curr: 'Contraseña actual incorrecta' }); setBusy(false); return; }
+      const { error } = await supabase.auth.updateUser({ password: newP });
+      if (error) throw error;
+      pushToast({ title: 'Contraseña actualizada', emoji: '🔐', type: 'good' });
+      setCurr(''); setNewP(''); setConf('');
+    } catch (err) {
+      pushToast({ title: 'Error al cambiar contraseña', emoji: '✕', msg: err.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fieldErr = (key) => errors[key] && (
+    <span className="tiny" style={{ color: 'var(--danger)', marginTop: 2 }}>{errors[key]}</span>
+  );
+
+  return (
+    <div className="card card-pad col" style={{ gap: 16 }}>
+      <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+        <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--warn-tint)', color: 'var(--warn)', display: 'grid', placeItems: 'center' }}>
+          <Icon name="lock" size={19} />
+        </span>
+        <div>
+          <h2 className="h-sec" style={{ margin: 0 }}>Cambiar contraseña</h2>
+          <p className="tiny muted" style={{ margin: 0 }}>Actualiza tu contraseña de acceso</p>
+        </div>
+      </div>
+
+      <div className="field">
+        <label className="label">Contraseña actual</label>
+        <input type="password" className="input" value={curr} placeholder="Tu contraseña actual"
+          onChange={e => { setCurr(e.target.value); setErrors(x => ({ ...x, curr: undefined })); }} />
+        {fieldErr('curr')}
+      </div>
+
+      <div className="field">
+        <label className="label">Nueva contraseña</label>
+        <input type="password" className="input" value={newP} placeholder="Mínimo 6 caracteres"
+          onChange={e => { setNewP(e.target.value); setErrors(x => ({ ...x, newP: undefined, conf: undefined })); }} />
+        {fieldErr('newP')}
+      </div>
+
+      <div className="field">
+        <label className="label">Confirmar nueva contraseña</label>
+        <input type="password" className="input" value={conf} placeholder="Repite la nueva contraseña"
+          onChange={e => { setConf(e.target.value); setErrors(x => ({ ...x, conf: undefined })); }} />
+        {fieldErr('conf')}
+      </div>
+
+      <button className="btn btn-primary" onClick={submit} disabled={busy || !curr || !newP || !conf}>
+        <Icon name="lock" size={16} />
+        {busy ? 'Verificando…' : 'Cambiar contraseña'}
+      </button>
     </div>
   );
 }
@@ -194,7 +276,7 @@ export default function Settings() {
       <div className="card card-pad col" style={{ gap: 12 }}>
         <div className="row" style={{ gap: 10, alignItems: 'center' }}>
           <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--primary-tint)', color: 'var(--primary)', display: 'grid', placeItems: 'center' }}>
-            <Icon name="lock" size={19} />
+            <Icon name="user" size={19} />
           </span>
           <h2 className="h-sec" style={{ margin: 0 }}>Cuenta</h2>
         </div>
@@ -203,6 +285,9 @@ export default function Settings() {
           <span style={{ fontWeight: 600 }}>{user?.email}</span>
         </div>
       </div>
+
+      {/* ── CAMBIAR CONTRASEÑA ── */}
+      <PasswordSection user={user} />
     </div>
   );
 }

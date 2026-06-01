@@ -21,6 +21,11 @@ export const PALETTES = [
     dark:  { primary:'#f472b6', p600:'#f9a8d4', p700:'#fbcfe8', tint:'#3b1228', tint2:'#4a1535', onP:'#1a0612' },
   },
   {
+    id: 'baby',   name: 'Rosita',    swatch: '#f472b6',
+    light: { primary:'#ec4899', p600:'#db2777', p700:'#be185d', tint:'#fdf2f8', tint2:'#fce7f3', onP:'#ffffff' },
+    dark:  { primary:'#f9a8d4', p600:'#fbcfe8', p700:'#fce7f3', tint:'#3b1228', tint2:'#4a1535', onP:'#1a0612' },
+  },
+  {
     id: 'orange', name: 'Naranja',   swatch: '#c2410c',
     light: { primary:'#c2410c', p600:'#a33810', p700:'#882e0c', tint:'#fef2ee', tint2:'#fde8dd', onP:'#ffffff' },
     dark:  { primary:'#fb923c', p600:'#fdba74', p700:'#fed7aa', tint:'#3b1708', tint2:'#4a1e0a', onP:'#1a0a03' },

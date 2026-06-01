@@ -161,6 +161,14 @@ export async function uploadAvatar(file) {
   return data.publicUrl + '?t=' + Date.now();
 }
 
+// ---------- CONTRASEÑA ----------
+export async function cambiarPassword(email, currentPassword, newPassword) {
+  const { error: authErr } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+  if (authErr) throw new Error('Contraseña actual incorrecta');
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
 // ---------- LOGROS ----------
 export async function getLogros() {
   const { data, error } = await supabase.from('user_achievements').select('*');

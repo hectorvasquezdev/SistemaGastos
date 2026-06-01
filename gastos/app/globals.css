@@ -200,6 +200,12 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -.02em; color: var(--
 .dash-charts { }
 .reg-grid { grid-template-columns: 1fr 1fr !important; }
 
+/* hero card del dashboard */
+.hero-card { display: grid; grid-template-columns: 1.4fr 1fr; }
+
+/* grid 2 columnas en modales (monto + fecha, etc.) */
+.edit-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
 @media (max-width: 900px) {
   .sidebar { display: none !important; }
   .mobile-nav { display: flex !important; }
@@ -208,6 +214,16 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -.02em; color: var(--
   .topbar-title { display: none; }
   .user-name { display: none; }
   .dash-charts { grid-template-columns: 1fr !important; }
+
+  /* hero: oculta el anillo y muestra solo el texto */
+  .hero-card { grid-template-columns: 1fr; }
+  .hero-ring { display: none !important; }
+
+  /* botones de acción del historial siempre visibles en touch */
+  .row-act { opacity: 1 !important; }
+
+  /* chanchito: sube por encima de la barra de navegación móvil */
+  .mascota-widget { bottom: 84px !important; }
 }
 
 @media (max-width: 640px) {
@@ -216,4 +232,14 @@ h1,h2,h3,h4 { margin: 0; font-weight: 700; letter-spacing: -.02em; color: var(--
   .auth-grid { grid-template-columns: 1fr !important; }
   .reg-grid { grid-template-columns: 1fr !important; }
   .card-pad { padding: 16px; }
+
+  /* modales: colapsa grids de 2 col a 1 col */
+  .edit-2col { grid-template-columns: 1fr; }
+
+  /* tipografía ajustada en pantallas pequeñas */
+  .h-page  { font-size: 21px; }
+  .display { font-size: 28px; }
+
+  /* hero: reduce padding interior */
+  .hero-card > div:first-child { padding: 20px 18px !important; }
 }

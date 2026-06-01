@@ -201,7 +201,7 @@ function MascotaWidget({ estado, abierto, mensaje, onClick }) {
         .chanchi-body:hover { filter: drop-shadow(0 6px 14px rgba(0,0,0,.22)); }
       `}</style>
 
-      <div style={{
+      <div className="mascota-widget" style={{
         position:'fixed', bottom:24, right:20, zIndex:9998,
         display:'flex', flexDirection:'column', alignItems:'flex-end', gap:10,
       }}>

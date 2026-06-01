@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext';
 import Icon from './Icons';
 import { ProgressBar, StatCard, SectionHead, Modal, useToast, StateBadge } from './UI';
 import { useMascota } from './Mascota';
+import { suggestEmoji } from '@/lib/emojiSuggestions';
 
 const EMOJI_OPTIONS = ['🍽️','🏠','🚌','💡','🛍️','🐷','✨','✈️','🎉','👗','💊','🎮','📚','🏋️','🐾','🎸','🍺','☕','🚗','💇'];
 const COLOR_OPTIONS = ['#e0792b','#0f766e','#2563eb','#b56a09','#9333ea','#4d7c0f','#64748b','#dc2626','#db2777','#0891b2','#7c3aed','#059669'];
@@ -11,10 +12,24 @@ const COLOR_OPTIONS = ['#e0792b','#0f766e','#2563eb','#b56a09','#9333ea','#4d7c0
 function NewCategoryModal({ onClose }) {
   const toast = useToast();
   const { addCategory } = useApp();
-  const [name,  setName]  = useState('');
-  const [icon,  setIcon]  = useState('✨');
-  const [color, setColor] = useState('#64748b');
-  const [busy,  setBusy]  = useState(false);
+  const [name,          setName]          = useState('');
+  const [icon,          setIcon]          = useState('✨');
+  const [color,         setColor]         = useState('#64748b');
+  const [busy,          setBusy]          = useState(false);
+  const [autoSuggested, setAutoSuggested] = useState(true);
+
+  const handleNameChange = (val) => {
+    setName(val);
+    if (autoSuggested) {
+      const s = suggestEmoji(val);
+      if (s) setIcon(s);
+    }
+  };
+
+  const handleIconClick = (e) => {
+    setIcon(e);
+    setAutoSuggested(false);
+  };
 
   const save = async () => {
     if (!name.trim()) { toast({ emoji:'⚠️', title:'Escribe un nombre', type:'default' }); return; }
@@ -35,13 +50,20 @@ function NewCategoryModal({ onClose }) {
       <div className="col" style={{ gap:16 }}>
         <div className="field">
           <label className="label">Nombre</label>
-          <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Viajes, Salida con amigas…" autoFocus />
+          <input className="input" value={name} onChange={e => handleNameChange(e.target.value)} placeholder="Ej. Viajes, Salida con amigas…" autoFocus />
         </div>
         <div className="field">
-          <label className="label">Ícono</label>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(10,1fr)', gap:6 }}>
+          <div className="row between" style={{ marginBottom:6 }}>
+            <label className="label" style={{ margin:0 }}>Ícono</label>
+            {autoSuggested && icon !== '✨' && (
+              <span className="tiny" style={{ color:'var(--primary)', fontWeight:700, display:'flex', alignItems:'center', gap:4 }}>
+                ✨ Sugerido automáticamente
+              </span>
+            )}
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(36px, 1fr))', gap:6 }}>
             {EMOJI_OPTIONS.map(e => (
-              <button key={e} onClick={() => setIcon(e)} className="btn"
+              <button key={e} onClick={() => handleIconClick(e)} className="btn"
                 style={{ fontSize:20, padding:6, borderRadius:10, background: icon===e ? 'var(--primary-tint)' : 'var(--surface-2)', border:`1.5px solid ${icon===e?'var(--primary)':'var(--border)'}` }}>
                 {e}
               </button>

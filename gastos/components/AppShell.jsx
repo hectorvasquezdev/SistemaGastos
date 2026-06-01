@@ -87,10 +87,8 @@ function UserMenu({ onLogout, onNav }) {
   const name = profile?.name || user?.email?.split('@')[0] || 'Usuario';
   return (
     <div style={{ position:'relative' }}>
-      <button onClick={() => setOpen(o => !o)} className="row" style={{ gap:9, background:'none', border:'none', cursor:'pointer', padding:'4px 6px 4px 4px', borderRadius:99 }}>
+      <button onClick={() => setOpen(o => !o)} style={{ background:'none', border:'none', cursor:'pointer', padding:2, borderRadius:99, display:'grid', placeItems:'center' }}>
         <UserAvatar profile={profile} user={user} />
-        <span className="user-name" style={{ fontWeight:700, fontSize:14 }}>{name.split(' ')[0]}</span>
-        <Icon name="chevD" size={15} color="var(--muted)" />
       </button>
       {open && <>
         <div style={{ position:'fixed', inset:0, zIndex:40 }} onClick={() => setOpen(false)} />

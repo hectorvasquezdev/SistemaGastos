@@ -16,7 +16,7 @@ function EditModal({ exp, onClose }) {
   return (
     <Modal open onClose={onClose} title="Editar gasto">
       <div className="col" style={{ gap:14 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        <div className="edit-2col">
           <div className="field"><label className="label">Monto</label><input className="input num" value={f.amount} onChange={e => setF({...f, amount:e.target.value.replace(/[^0-9.]/g,'')})} /></div>
           <div className="field"><label className="label">Fecha</label><input type="date" className="input num" value={f.date} onChange={e => setF({...f, date:e.target.value})} /></div>
         </div>
