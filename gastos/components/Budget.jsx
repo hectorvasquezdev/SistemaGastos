@@ -116,7 +116,8 @@ function IncomeTab() {
   const TYPES = ['Sueldo','Adicional','Bono','Otro'];
 
   function IncomeModal({ inc }) {
-    const [f, setF] = useState(inc || { type:'Adicional', label:'', amount:'' });
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const [f, setF] = useState(inc || { type:'Adicional', label:'', amount:'', date: todayISO });
     const save = async () => {
       const data = { type:f.type, label:f.label||f.type, amount:parseFloat(f.amount)||0 };
       if (inc) await updateIncome(inc.id, data); else { await addIncome(data); reaccionar('ingreso'); }
@@ -126,6 +127,7 @@ function IncomeTab() {
     return (
       <Modal open onClose={() => setModal(null)} title={inc?'Editar ingreso':'Nuevo ingreso'} width={420}>
         <div className="col" style={{ gap:14 }}>
+          <div className="field"><label className="label">Fecha</label><input type="date" className="input num" value={f.date || todayISO} onChange={e => setF({...f, date:e.target.value})} max={todayISO} /></div>
           <div className="field"><label className="label">Tipo</label>
             <select className="input select" value={f.type} onChange={e => setF({...f, type:e.target.value})}>
               {TYPES.map(t => <option key={t}>{t}</option>)}

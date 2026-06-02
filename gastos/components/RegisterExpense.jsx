@@ -123,20 +123,18 @@ export default function RegisterExpense({ onNav }) {
           )}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }} className="reg-grid">
-          <div className="field">
-            <label className="label">Fecha</label>
-            <input type="date" className="input num" value={date} onChange={e => setDate(e.target.value)} max={todayISO} />
-          </div>
-          <div className="field">
-            <label className="label">Descripción</label>
-            <input className="input" value={desc} onChange={e => setDesc(e.target.value)}
-              placeholder={`Ej. ${category==='trans'?'Pasaje al trabajo':category==='alim'?'Menú del día':'Detalle'}`} />
-          </div>
+        <div className="field">
+          <label className="label">Descripción</label>
+          <input className="input" value={desc} onChange={e => setDesc(e.target.value)}
+            placeholder={`Ej. ${category==='trans'?'Pasaje al trabajo':category==='alim'?'Menú del día':'Detalle'}`} />
         </div>
         <div className="field">
           <label className="label">Comentario <span className="faint" style={{ fontWeight:500 }}>(opcional)</span></label>
           <input className="input" value={comment} onChange={e => setComment(e.target.value)} placeholder="Una nota para ti…" />
+        </div>
+        <div className="field">
+          <label className="label">Fecha</label>
+          <input type="date" className="input num" value={date} onChange={e => setDate(e.target.value)} max={todayISO} />
         </div>
 
         <div className="row" style={{ gap:10 }}>
