@@ -8,12 +8,10 @@ import AppShell from '@/components/AppShell';
 import Dashboard from '@/components/Dashboard';
 import RegisterExpense from '@/components/RegisterExpense';
 import History from '@/components/History';
-import Budget from '@/components/Budget';
+import Budget, { IncomeTabView } from '@/components/Budget';
 import Cash from '@/components/Cash';
-import ImportYape from '@/components/ImportYape';
 import Reports from '@/components/Reports';
 import Gamification from '@/components/Gamification';
-import Categories from '@/components/Categories';
 import Settings from '@/components/Settings';
 import { applyAccent } from '@/lib/palettes';
 
@@ -52,14 +50,13 @@ function AppContent() {
   const nav = v => setView(v);
 
   const screens = {
-    dash:    <Dashboard onNav={nav} />,
-    add:     <RegisterExpense onNav={nav} />,
-    history: <History />,
-    budget:  <Budget />,
-    cats:    <Categories />,
-    cash:    <Cash onNav={nav} />,
-    yape:    <ImportYape onNav={nav} />,
-    reports: <Reports onNav={nav} />,
+    dash:     <Dashboard onNav={nav} />,
+    add:      <RegisterExpense onNav={nav} />,
+    income:   <IncomeTabView />,
+    budget:   <Budget />,
+    cash:     <Cash onNav={nav} />,
+    reports:  <Reports onNav={nav} />,
+    history:  <History />,
     achiev:   <Gamification />,
     settings: <Settings />,
   };

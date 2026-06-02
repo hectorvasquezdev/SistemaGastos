@@ -3,6 +3,23 @@ import { useState, useCallback, createContext, useContext, useRef, useEffect } f
 
 const MascotaCtx = createContext(null);
 
+// ── Recompensas visuales desbloqueables ─────────────────────────
+export const SKINS = {
+  default: { nombre: 'Normal',           color: 'var(--primary)', glow: '' },
+  dorado:  { nombre: 'Chanchito Dorado', color: '#c9920a',        glow: '0 0 20px 6px rgba(201,146,10,.55)' },
+  rosa:    { nombre: 'Chanchito Rosa',   color: '#db2777',        glow: '0 0 20px 6px rgba(219,39,119,.4)' },
+  morado:  { nombre: 'Chanchito VIP',    color: '#7c3aed',        glow: '0 0 20px 6px rgba(124,58,237,.4)' },
+};
+
+export const ACCESORIOS = {
+  none:     { nombre: 'Sin accesorio', emoji: '' },
+  corona:   { nombre: 'Corona Real',   emoji: '👑' },
+  mono:     { nombre: 'Moño Rosa',     emoji: '🎀' },
+  sombrero: { nombre: 'Sombrero Mago', emoji: '🎩' },
+  gafas:    { nombre: 'Gafas Cool',    emoji: '🕶️' },
+  diamante: { nombre: 'Diamante',      emoji: '💎' },
+};
+
 const TIPS_GENERALES = [
   'Registra todos tus gastos, hasta el más pequeño cuenta. 💡',
   'Revisa tu presupuesto cada semana para no llevarte sorpresas. 📅',
@@ -21,10 +38,10 @@ const TIPS_GENERALES = [
 ];
 
 const ESTADOS = {
-  idle:     { emoji:'🐷', color:'var(--primary)' },
-  hablando: { emoji:'🐷', color:'var(--lime)' },
-  alerta:   { emoji:'🐷', color:'var(--warn)' },
-  celebra:  { emoji:'🐷', color:'#9333ea' },
+  idle:     { color: 'var(--primary)' },
+  hablando: { color: 'var(--lime)' },
+  alerta:   { color: 'var(--warn)' },
+  celebra:  { color: '#9333ea' },
 };
 
 export function MascotaProvider({ children }) {
@@ -32,8 +49,29 @@ export function MascotaProvider({ children }) {
   const [estado,   setEstado]   = useState('idle');
   const [abierto,  setAbierto]  = useState(false);
   const [appStats, setAppStats] = useState(null);
-  const timer = useRef(null);
+  const [skin,     setSkin]     = useState('default');
+  const [acc,      setAcc]      = useState('none');
+  const timer  = useRef(null);
   const tipIdx = useRef(0);
+
+  useEffect(() => {
+    const s = localStorage.getItem('gastos_skin');
+    const a = localStorage.getItem('gastos_acc');
+    if (s && SKINS[s])      setSkin(s);
+    if (a && ACCESORIOS[a]) setAcc(a);
+  }, []);
+
+  const equipSkin = useCallback((id) => {
+    if (!SKINS[id]) return;
+    setSkin(id);
+    localStorage.setItem('gastos_skin', id);
+  }, []);
+
+  const equipAcc = useCallback((id) => {
+    if (!ACCESORIOS[id]) return;
+    setAcc(id);
+    localStorage.setItem('gastos_acc', id);
+  }, []);
 
   const mostrarMensaje = useCallback((msg, tipo = 'hablando', dur = 5000) => {
     if (timer.current) clearTimeout(timer.current);
@@ -43,7 +81,6 @@ export function MascotaProvider({ children }) {
     timer.current = setTimeout(() => { setAbierto(false); setEstado('idle'); }, dur);
   }, []);
 
-  // llamado desde fuera con contexto de stats
   const reaccionar = useCallback((tipo, stats) => {
     if (stats) setAppStats(stats);
     const msgs = {
@@ -72,28 +109,19 @@ export function MascotaProvider({ children }) {
       const top3      = [...stats.byCat].filter(c => c.slug !== 'ahorro' && c.spent > 0).sort((a,b) => b.spent - a.spent).slice(0,3);
       const top       = top3[0];
 
-      // excedidas
       excedidas.forEach(c => {
         const exceso = c.spent - c.budget;
         tips.push(`Te pasaste ${fmt(exceso)} en ${c.name}. Intenta compensar reduciendo en otra categoría este mes. 🎯`);
       });
-
-      // cerca del límite
       cercanas.forEach(c => {
         tips.push(`En ${c.name} ya usaste el ${c.pct}%. Solo te quedan ${fmt(c.remaining)} — ve con calma esta semana. ⚠️`);
       });
-
-      // mayor gasto
       if (top && !excedidas.length) {
         tips.push(`Tu mayor gasto este mes es ${top.name} (${fmt(top.spent)}). ¿Hay algo que puedas recortar ahí? 💡`);
       }
-
-      // categorías sin usar (presupuesto asignado pero sin gastar nada)
       if (sinUsar.length && stats.spent > 0) {
         tips.push(`Tienes presupuesto asignado en ${sinUsar[0].name} pero no has gastado nada. ¿Puedes moverlo al ahorro? 🐷`);
       }
-
-      // distribución de gastos
       if (top3.length >= 2 && stats.spent > 0) {
         const pctTop = Math.round((top3[0].spent + (top3[1]?.spent||0)) / stats.spent * 100);
         if (pctTop > 70)
@@ -101,19 +129,16 @@ export function MascotaProvider({ children }) {
       }
     }
 
-    // ingresos vs gastos
     if (stats.available < 0)
       tips.push(`Tus gastos superan tu ingreso en ${fmt(-stats.available)}. Revisa qué puedes recortar urgente. 📉`);
     else if (stats.income > 0 && stats.available > 0)
       tips.push(`Te quedan ${fmt(stats.available)} disponibles este mes. ¿Los mueves al ahorro? 💰`);
 
-    // porcentaje del sueldo
     if (stats.pctSueldo > 90)
       tips.push(`Ya usaste el ${stats.pctSueldo}% de tu sueldo. Cuidado con los últimos días del mes. 🛑`);
     else if (stats.pctSueldo > 75)
       tips.push(`Vas en el ${stats.pctSueldo}% de tu sueldo. Aún puedes cerrar el mes bien si moderas los gastos. 👀`);
 
-    // ahorro
     if (stats.ahorroReal > 0 && stats.ahorroEsperado > 0) {
       if (stats.ahorroReal >= stats.ahorroEsperado)
         tips.push(`¡Cumpliste tu meta de ahorro de ${fmt(stats.ahorroEsperado)}! Considera subir el objetivo un 10%. 🏆`);
@@ -125,18 +150,15 @@ export function MascotaProvider({ children }) {
       tips.push('Aún no registras ahorro este mes. Aunque sea S/ 50 marca la diferencia. 🐷');
     }
 
-    // yape vs efectivo
     if (stats.cash > 0 && stats.yape > 0) {
       const pctEfectivo = Math.round(stats.cash / (stats.cash + stats.yape) * 100);
       if (pctEfectivo > 60)
         tips.push(`El ${pctEfectivo}% de tus gastos son en efectivo. Ese dinero es más difícil de rastrear — sigue registrándolo. 💵`);
     }
 
-    // si va muy bien
     if (tips.length === 0 && stats.spent > 0 && stats.pctSueldo <= 60)
       tips.push(`¡Vas muy bien! Solo usaste el ${stats.pctSueldo}% de tu sueldo. Puedes adelantar tu ahorro del próximo mes. 🌟`);
 
-    // fallback: tip general rotativo
     if (tips.length === 0)
       tips.push(TIPS_GENERALES[tipIdx.current++ % TIPS_GENERALES.length]);
 
@@ -150,9 +172,9 @@ export function MascotaProvider({ children }) {
   }, [abierto, appStats, getTipContextual, mostrarMensaje]);
 
   return (
-    <MascotaCtx.Provider value={{ reaccionar, setAppStats }}>
+    <MascotaCtx.Provider value={{ reaccionar, setAppStats, skin, acc, equipSkin, equipAcc }}>
       {children}
-      <MascotaWidget estado={estado} abierto={abierto} mensaje={mensaje} onClick={alHacerClick} />
+      <MascotaWidget estado={estado} abierto={abierto} mensaje={mensaje} onClick={alHacerClick} skin={skin} acc={acc} />
     </MascotaCtx.Provider>
   );
 }
@@ -161,8 +183,12 @@ export function useMascota() {
   return useContext(MascotaCtx);
 }
 
-function MascotaWidget({ estado, abierto, mensaje, onClick }) {
-  const e = ESTADOS[estado] || ESTADOS.idle;
+function MascotaWidget({ estado, abierto, mensaje, onClick, skin, acc }) {
+  const e        = ESTADOS[estado] || ESTADOS.idle;
+  const skinData = SKINS[skin]      || SKINS.default;
+  const accData  = ACCESORIOS[acc]  || ACCESORIOS.none;
+  const activeColor = estado === 'idle' ? skinData.color : e.color;
+
   return (
     <>
       <style>{`
@@ -202,32 +228,31 @@ function MascotaWidget({ estado, abierto, mensaje, onClick }) {
       `}</style>
 
       <div className="mascota-widget" style={{
-        position:'fixed', bottom:24, right:20, zIndex:9998,
-        display:'flex', flexDirection:'column', alignItems:'flex-end', gap:10,
+        position: 'fixed', bottom: 24, right: 20, zIndex: 9998,
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10,
       }}>
         {/* burbuja de consejo */}
         {abierto && mensaje && (
           <div style={{
-            background:'var(--surface)', border:'1.5px solid var(--border)',
-            borderRadius:16, padding:'12px 16px',
-            fontSize:13.5, fontWeight:600, lineHeight:1.5,
-            color:'var(--text)', boxShadow:'var(--shadow-lg)',
-            maxWidth:220, textAlign:'left',
-            animation:'burbuja-in .25s ease-out',
-            position:'relative',
+            background: 'var(--surface)', border: '1.5px solid var(--border)',
+            borderRadius: 16, padding: '12px 16px',
+            fontSize: 13.5, fontWeight: 600, lineHeight: 1.5,
+            color: 'var(--text)', boxShadow: 'var(--shadow-lg)',
+            maxWidth: 220, textAlign: 'left',
+            animation: 'burbuja-in .25s ease-out',
+            position: 'relative',
           }}>
             <div style={{
-              position:'absolute', bottom:-8, right:28,
-              width:14, height:14,
-              background:'var(--surface)', border:'1.5px solid var(--border)',
-              borderTop:'none', borderLeft:'none',
-              transform:'rotate(45deg)',
+              position: 'absolute', bottom: -8, right: 28,
+              width: 14, height: 14,
+              background: 'var(--surface)', border: '1.5px solid var(--border)',
+              borderTop: 'none', borderLeft: 'none',
+              transform: 'rotate(45deg)',
             }} />
             <div style={{
-              width:8, height:8, borderRadius:'50%',
-              background: e.color,
-              display:'inline-block', marginRight:6,
-              verticalAlign:'middle',
+              width: 8, height: 8, borderRadius: '50%',
+              background: activeColor,
+              display: 'inline-block', marginRight: 6, verticalAlign: 'middle',
             }} />
             {mensaje}
           </div>
@@ -236,27 +261,39 @@ function MascotaWidget({ estado, abierto, mensaje, onClick }) {
         {/* chanchito */}
         <div className="chanchi-body" onClick={onClick} title="Tócame para un consejo 🐷">
           <div style={{
-            width:56, height:56,
-            borderRadius:'50%',
-            background: `color-mix(in srgb, ${e.color} 15%, var(--surface))`,
-            border: `2.5px solid color-mix(in srgb, ${e.color} 40%, transparent)`,
-            display:'grid', placeItems:'center',
-            fontSize:30,
+            width: 56, height: 56,
+            borderRadius: '50%',
+            background: `color-mix(in srgb, ${activeColor} 15%, var(--surface))`,
+            border: `2.5px solid color-mix(in srgb, ${activeColor} 40%, transparent)`,
+            display: 'grid', placeItems: 'center',
+            fontSize: 30,
+            position: 'relative',
+            boxShadow: estado === 'idle' ? skinData.glow : '',
             animation: estado === 'idle'     ? 'chanchi-float 3s ease-in-out infinite'
                       : estado === 'hablando' ? 'chanchi-habla 1.2s ease-in-out infinite'
                       : estado === 'alerta'   ? 'chanchi-alerta .7s ease-in-out 3'
                       : estado === 'celebra'  ? 'chanchi-celebra .8s ease-in-out 2'
                       : 'chanchi-float 3s ease-in-out infinite',
           }}>
-            {e.emoji}
+            🐷
+            {accData.emoji && (
+              <div style={{
+                position: 'absolute', top: -12, right: -8,
+                fontSize: 20, lineHeight: 1,
+                filter: 'drop-shadow(0 1px 3px rgba(0,0,0,.3))',
+                pointerEvents: 'none',
+              }}>
+                {accData.emoji}
+              </div>
+            )}
           </div>
           {!abierto && (
             <div style={{
-              position:'absolute', top:-4, right:-2,
-              background: e.color, borderRadius:'50%',
-              width:16, height:16, display:'grid', placeItems:'center',
-              fontSize:9, fontWeight:800, color:'#fff',
-              border:'2px solid var(--bg)',
+              position: 'absolute', top: -4, right: -2,
+              background: activeColor, borderRadius: '50%',
+              width: 16, height: 16, display: 'grid', placeItems: 'center',
+              fontSize: 9, fontWeight: 800, color: '#fff',
+              border: '2px solid var(--bg)',
             }}>💡</div>
           )}
         </div>

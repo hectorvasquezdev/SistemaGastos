@@ -17,7 +17,7 @@ const COLOR_OPTIONS = [
   '#7c3aed','#059669','#b45309','#0369a1','#be185d',
 ];
 
-function CategoryModal({ cat, onClose }) {
+export function CategoryModal({ cat, onClose }) {
   const { addCategory, updateCategory } = useApp();
   const pushToast = useToast();
   const isEdit = !!cat;
@@ -129,7 +129,7 @@ function CategoryModal({ cat, onClose }) {
   );
 }
 
-function DeleteConfirm({ cat, onConfirm, onClose }) {
+export function DeleteConfirm({ cat, onConfirm, onClose }) {
   return (
     <Modal open onClose={onClose} title="Eliminar categoría" width={400}>
       <div className="col" style={{ gap: 16 }}>

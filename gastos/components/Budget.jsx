@@ -4,95 +4,8 @@ import { useApp } from '@/context/AppContext';
 import Icon from './Icons';
 import { ProgressBar, StatCard, SectionHead, Modal, useToast, StateBadge } from './UI';
 import { useMascota } from './Mascota';
-import { suggestEmoji } from '@/lib/emojiSuggestions';
+import { CategoryModal, DeleteConfirm } from './Categories';
 
-const EMOJI_OPTIONS = ['🍽️','🏠','🚌','💡','🛍️','🐷','✨','✈️','🎉','👗','💊','🎮','📚','🏋️','🐾','🎸','🍺','☕','🚗','💇'];
-const COLOR_OPTIONS = ['#e0792b','#0f766e','#2563eb','#b56a09','#9333ea','#4d7c0f','#64748b','#dc2626','#db2777','#0891b2','#7c3aed','#059669'];
-
-function NewCategoryModal({ onClose }) {
-  const toast = useToast();
-  const { addCategory } = useApp();
-  const [name,          setName]          = useState('');
-  const [icon,          setIcon]          = useState('✨');
-  const [color,         setColor]         = useState('#64748b');
-  const [busy,          setBusy]          = useState(false);
-  const [autoSuggested, setAutoSuggested] = useState(true);
-
-  const handleNameChange = (val) => {
-    setName(val);
-    if (autoSuggested) {
-      const s = suggestEmoji(val);
-      if (s) setIcon(s);
-    }
-  };
-
-  const handleIconClick = (e) => {
-    setIcon(e);
-    setAutoSuggested(false);
-  };
-
-  const save = async () => {
-    if (!name.trim()) { toast({ emoji:'⚠️', title:'Escribe un nombre', type:'default' }); return; }
-    setBusy(true);
-    try {
-      await addCategory({ name: name.trim(), icon, color });
-      toast({ emoji:'🎉', type:'good', title:`Categoría "${name.trim()}" creada` });
-      onClose();
-    } catch(e) {
-      toast({ emoji:'❌', title:'Error', msg: e.message });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal open onClose={onClose} title="Nueva categoría" width={420}>
-      <div className="col" style={{ gap:16 }}>
-        <div className="field">
-          <label className="label">Nombre</label>
-          <input className="input" value={name} onChange={e => handleNameChange(e.target.value)} placeholder="Ej. Viajes, Salida con amigas…" autoFocus />
-        </div>
-        <div className="field">
-          <div className="row between" style={{ marginBottom:6 }}>
-            <label className="label" style={{ margin:0 }}>Ícono</label>
-            {autoSuggested && icon !== '✨' && (
-              <span className="tiny" style={{ color:'var(--primary)', fontWeight:700, display:'flex', alignItems:'center', gap:4 }}>
-                ✨ Sugerido automáticamente
-              </span>
-            )}
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(36px, 1fr))', gap:6 }}>
-            {EMOJI_OPTIONS.map(e => (
-              <button key={e} onClick={() => handleIconClick(e)} className="btn"
-                style={{ fontSize:20, padding:6, borderRadius:10, background: icon===e ? 'var(--primary-tint)' : 'var(--surface-2)', border:`1.5px solid ${icon===e?'var(--primary)':'var(--border)'}` }}>
-                {e}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="field">
-          <label className="label">Color</label>
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-            {COLOR_OPTIONS.map(c => (
-              <button key={c} onClick={() => setColor(c)}
-                style={{ width:30, height:30, borderRadius:8, background:c, border: color===c ? '3px solid var(--text)' : '3px solid transparent', cursor:'pointer' }} />
-            ))}
-          </div>
-        </div>
-        <div style={{ padding:'12px 14px', borderRadius:12, background:'var(--surface-2)', display:'flex', gap:12, alignItems:'center' }}>
-          <span style={{ width:40, height:40, borderRadius:12, background:`color-mix(in srgb,${color} 14%, transparent)`, display:'grid', placeItems:'center', fontSize:20 }}>{icon}</span>
-          <span style={{ fontWeight:700 }}>{name || 'Vista previa'}</span>
-        </div>
-        <div className="row" style={{ gap:10 }}>
-          <button className="btn btn-ghost grow" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary grow" onClick={save} disabled={busy}>{busy?'Guardando…':'Crear categoría'}</button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-const DEFAULT_SLUGS = ['alim','alq','trans','serv','comp','ahorro','otros'];
 
 function BudgetTab() {
   const { stats, setBudget, deleteCategory, money, money0 } = useApp();
@@ -100,14 +13,17 @@ function BudgetTab() {
   const s    = stats();
   const cats = s.byCat;
   const [edit,    setEdit]    = useState({});
-  const [showNew, setShowNew] = useState(false);
+  const [catModal, setCatModal] = useState(false); // false=cerrado | 'new' | objeto=editar
+  const [delCat,   setDelCat]  = useState(null);
 
-  const handleDelete = async (c) => {
+  const handleDeleteConfirm = async () => {
     try {
-      await deleteCategory(c.id);
-      toast({ emoji:'🗑️', title:`Categoría "${c.name}" eliminada` });
+      await deleteCategory(delCat.id);
+      toast({ emoji:'🗑️', title:`"${delCat.name}" eliminada` });
     } catch(e) {
       toast({ emoji:'❌', title:'Error', msg: e.message });
+    } finally {
+      setDelCat(null);
     }
   };
 
@@ -126,13 +42,12 @@ function BudgetTab() {
       </div>
 
       <div className="card card-pad">
-        <SectionHead icon="tag" title="Tu presupuesto por categoría" sub="Edita cuánto planeas gastar en cada una"
-          right={<button className="btn btn-primary btn-sm" onClick={() => setShowNew(true)}><Icon name="plus" size={16} />Nueva categoría</button>} />
+        <SectionHead icon="tag" title="Tu presupuesto por categoría" sub="Edita el monto, ícono o nombre de cada una"
+          right={<button className="btn btn-primary btn-sm" onClick={() => setCatModal('new')}><Icon name="plus" size={16} />Nueva categoría</button>} />
         <div className="col" style={{ gap:6 }}>
           {cats.map(c => {
-            const editing    = edit[c.slug] !== undefined;
-            const isAhorro   = c.slug === 'ahorro';
-            const isCustom   = !DEFAULT_SLUGS.includes(c.slug);
+            const editing  = edit[c.slug] !== undefined;
+            const isAhorro = c.slug === 'ahorro';
             return (
               <div key={c.slug} style={{ padding:'14px 0', borderBottom:'1px solid var(--border)' }}>
                 <div className="row between wrap" style={{ gap:12 }}>
@@ -154,8 +69,11 @@ function BudgetTab() {
                         style={{ width:64, border:'none', background:'none', fontWeight:700, fontSize:15, textAlign:'right', outline:'none', color:'var(--text)' }} />
                     </div>
                     {!isAhorro && <StateBadge state={c.state} />}
-                    {isCustom && (
-                      <button className="btn btn-icon btn-ghost" onClick={() => handleDelete(c)} title="Eliminar categoría">
+                    <button className="btn btn-icon btn-ghost" onClick={() => setCatModal(c)} title="Editar categoría">
+                      <Icon name="edit" size={15} />
+                    </button>
+                    {!isAhorro && (
+                      <button className="btn btn-icon btn-ghost" onClick={() => setDelCat(c)} title="Eliminar categoría">
                         <Icon name="trash" size={15} color="var(--danger)" />
                       </button>
                     )}
@@ -172,10 +90,16 @@ function BudgetTab() {
           })}
         </div>
         <p className="tiny muted" style={{ marginTop:14, display:'flex', gap:6, alignItems:'center' }}>
-          <Icon name="info" size={15} />Toca un monto para editarlo. El sistema compara tu gasto real contra el plan automáticamente.
+          <Icon name="info" size={15} />Toca el monto para editarlo. Usa ✏️ para cambiar nombre, ícono o color.
         </p>
       </div>
-      {showNew && <NewCategoryModal onClose={() => setShowNew(false)} />}
+
+      {catModal !== false && (
+        <CategoryModal cat={catModal === 'new' ? null : catModal} onClose={() => setCatModal(false)} />
+      )}
+      {delCat && (
+        <DeleteConfirm cat={delCat} onConfirm={handleDeleteConfirm} onClose={() => setDelCat(null)} />
+      )}
     </div>
   );
 }
@@ -224,7 +148,7 @@ function IncomeTab() {
         <StatCard label="Ingreso total"     value={money0(total)}       sub={`${incomes.length} fuentes`}         icon="arrowDown" tone="primary" />
         <StatCard label="Gastos del mes"    value={money0(s.spent)}     sub="sin contar ahorro"                   icon="arrowUp" />
         <StatCard label="Ahorro"            value={money0(s.ahorroReal)}                                          icon="coins" tone="good" />
-        <StatCard label="Te queda del sueldo" value={money0(finApprox)} sub={finApprox>=0?'¡buen colchón! 💪':'cuidado'} icon="wallet" tone={finApprox>=0?'good':'warn'} />
+        <StatCard label="Saldo disponible" value={money0(finApprox)} sub={finApprox>=0?'Margen saludable 💪':'Revisa tus gastos'} icon="wallet" tone={finApprox>=0?'good':'warn'} />
       </div>
 
       <div className="card card-pad">
@@ -256,23 +180,26 @@ function IncomeTab() {
   );
 }
 
-export default function Budget() {
-  const [tab, setTab] = useState('budget');
-  const tabs = [['budget','Presupuesto','target'],['income','Ingresos','coins']];
+export function IncomeTabView() {
   return (
     <div className="view-in">
       <div className="col" style={{ gap:6, marginBottom:18 }}>
-        <h1 className="h-page">Presupuesto e ingresos</h1>
-        <p className="muted" style={{ fontSize:14.5 }}>Define tu plan mensual y registra cuánto ganas. 🎯</p>
+        <h1 className="h-page">Ingresos 💰</h1>
+        <p className="muted" style={{ fontSize:14.5 }}>Registra tu sueldo, bonos y otros ingresos del mes.</p>
       </div>
-      <div className="row" style={{ gap:6, marginBottom:18, background:'var(--surface-3)', padding:5, borderRadius:12, width:'fit-content' }}>
-        {tabs.map(([id,label,ic]) => (
-          <button key={id} onClick={() => setTab(id)} className="btn btn-sm" style={{ background:tab===id?'var(--surface)':'transparent', color:tab===id?'var(--text)':'var(--muted)', boxShadow:tab===id?'var(--shadow-sm)':'none', borderRadius:9 }}>
-            <Icon name={ic} size={16} />{label}
-          </button>
-        ))}
+      <IncomeTab />
+    </div>
+  );
+}
+
+export default function Budget() {
+  return (
+    <div className="view-in">
+      <div className="col" style={{ gap:6, marginBottom:18 }}>
+        <h1 className="h-page">Presupuesto</h1>
+        <p className="muted" style={{ fontSize:14.5 }}>Define tu plan mensual y controla tus gastos. 🎯</p>
       </div>
-      {tab === 'budget' ? <BudgetTab /> : <IncomeTab />}
+      <BudgetTab />
     </div>
   );
 }

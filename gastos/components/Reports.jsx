@@ -63,23 +63,6 @@ function GraficaMeses() {
   );
 }
 
-function Recommendations() {
-  const { recommendations } = useApp();
-  const recs = recommendations();
-  return (
-    <div className="card card-pad">
-      <SectionHead icon="bulb" title="Recomendaciones para ti" sub="Consejos simples para ahorrar más" />
-      <div className="col" style={{ gap:10 }}>
-        {recs.map((r,i) => (
-          <div key={i} className="row" style={{ gap:13, padding:'13px 15px', borderRadius:13, background:r.tone==='warn'?'var(--warn-tint)':'var(--surface-2)', border:`1px solid ${r.tone==='warn'?'color-mix(in srgb,var(--warn) 22%,transparent)':'var(--border)'}` }}>
-            <span style={{ fontSize:22, flex:'none' }}>{r.icon}</span>
-            <p style={{ margin:0, fontSize:14, lineHeight:1.5, fontWeight:500 }}>{r.text}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function Stat({ label, value, sub, tone }) {
   return (
@@ -143,7 +126,7 @@ export default function Reports({ onNav }) {
 
         <div className="col" style={{ gap:16 }}>
           <div className="card card-pad">
-            <SectionHead icon="pie" title="% de gasto por categoría" />
+            <SectionHead icon="pie" title="¿A dónde va tu dinero?" sub="Distribución del gasto por categoría" />
             <div className="col" style={{ gap:11 }}>
               {pctCats.map(c => (
                 <div key={c.slug} className="col" style={{ gap:5 }}>
@@ -167,14 +150,14 @@ export default function Reports({ onNav }) {
 
       <GraficaMeses />
 
-      <div style={{ marginTop:16 }}><Recommendations /></div>
-
       <div className="card card-pad" style={{ marginTop:16, background:'var(--primary-tint)', border:'1px solid color-mix(in srgb,var(--primary) 22%,transparent)', display:'flex', gap:14, alignItems:'center' }}>
-        <span style={{ fontSize:26 }}>🚀</span>
+        <span style={{ fontSize:26 }}>📌</span>
         <div className="col grow">
-          <span style={{ fontWeight:700, fontSize:15 }}>Para el próximo mes</span>
+          <span style={{ fontWeight:700, fontSize:15 }}>Acción para el próximo mes</span>
           <span className="tiny" style={{ color:'var(--primary)' }}>
-            {s.exceeded.length ? `Ajusta tu presupuesto de ${s.exceeded[0].name} o cuida más ese gasto.` : '¡Vas excelente! Intenta subir tu meta de ahorro un poco más.'}
+            {s.exceeded.length
+              ? `Revisa el presupuesto de ${s.exceeded[0].name} — fue la categoría más ajustada este mes.`
+              : 'Buen cierre de mes. Considera aumentar tu meta de ahorro el próximo periodo.'}
           </span>
         </div>
         <button className="btn btn-sm" style={{ background:'var(--surface)', color:'var(--primary)' }} onClick={() => onNav('budget')}>Ajustar plan</button>

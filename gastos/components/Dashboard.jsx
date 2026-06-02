@@ -13,7 +13,7 @@ function Hero({ s, onNav }) {
     ? { emoji:'🎉', title:'¡Vas genial este mes!', text:`Llevas el ${s.used}% de tu presupuesto y ya ahorraste S/ ${Math.round(s.ahorroReal).toLocaleString('es-PE')}. Sigue así.` }
     : s.exceeded.length
       ? { emoji:'💪', title:'Aún estás a tiempo', text:`Te pasaste en ${s.exceeded.length} categoría${s.exceeded.length>1?'s':''}. Ajusta un poco y recuperas el control.` }
-      : { emoji:'👀', title:'Cuidado con el ritmo', text:`Ya comprometiste el ${s.pctSueldo}% de tu sueldo. Revisa tus gastos grandes.` };
+      : { emoji:'📊', title:'Revisa tu ritmo de gasto', text:`Llevas el ${s.pctSueldo}% de tu sueldo comprometido. Es buen momento para revisar los gastos más grandes.` };
 
   return (
     <div className="card hero-card" style={{ overflow:'hidden', border:'none', background:'linear-gradient(135deg, var(--primary-700), var(--primary) 70%)', color:'#fff' }}>
@@ -107,7 +107,7 @@ export default function Dashboard({ onNav }) {
       {/* charts row */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1.3fr', gap:16 }} className="dash-charts">
         <div className="card card-pad">
-          <SectionHead icon="pie" title="¿En qué se va tu plata?" sub="Gasto por categoría este mes" />
+          <SectionHead icon="pie" title="Así estás usando tu dinero" sub="Lo que más consume tu presupuesto este mes" />
           <div className="row" style={{ gap:18, alignItems:'center' }}>
             <div style={{ width:170, flex:'none' }}>
               <DonutChart data={donutData} height={170} />

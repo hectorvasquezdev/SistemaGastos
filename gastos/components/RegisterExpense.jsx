@@ -52,9 +52,9 @@ export default function RegisterExpense({ onNav }) {
       else                       reaccionar('bien');
 
       toast({ emoji:'✅', type:'good', title:`${money(amt)} en ${cat?.name}`,
-        msg: nuevoPct > 100 ? `¡Ojo! Ya superaste el presupuesto de ${cat?.name}.`
-           : nuevoPct >= 70 ? `Vas en ${nuevoPct}% de ${cat?.name}.`
-           : `Te quedan ${money((cc?.budget||0) - nuevoTotal)} en ${cat?.name}.` });
+        msg: nuevoPct > 100 ? `Superaste el límite de ${cat?.name} este mes.`
+           : nuevoPct >= 70 ? `Llevas el ${nuevoPct}% del presupuesto de ${cat?.name}.`
+           : `Disponible en ${cat?.name}: ${money((cc?.budget||0) - nuevoTotal)}.` });
       setAmount(''); setDesc(''); setComment('');
       if (!keepOpen) onNav('dash');
     } catch(e) {
