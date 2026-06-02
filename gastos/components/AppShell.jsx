@@ -144,14 +144,6 @@ function Sidebar({ view, onNav, theme, toggleTheme }) {
                 </button>
                 {subAdd && (
                   <div className="col" style={{ gap:2, marginTop:4, paddingLeft:10 }}>
-                    <button className="btn btn-sm" onClick={() => { onNav('add'); setSubAdd(false); }} style={{
-                      justifyContent:'flex-start', gap:10, borderRadius:9,
-                      background: view==='add' ? 'var(--primary-tint)' : 'transparent',
-                      color: view==='add' ? 'var(--primary)' : 'var(--text-2)',
-                      fontWeight: view==='add' ? 700 : 600,
-                    }}>
-                      <Icon name="arrowDown" size={15} />Registrar gasto
-                    </button>
                     <button className="btn btn-sm" onClick={() => { onNav('income'); setSubAdd(false); }} style={{
                       justifyContent:'flex-start', gap:10, borderRadius:9,
                       background: view==='income' ? 'var(--primary-tint)' : 'transparent',
@@ -159,6 +151,14 @@ function Sidebar({ view, onNav, theme, toggleTheme }) {
                       fontWeight: view==='income' ? 700 : 600,
                     }}>
                       <Icon name="arrowUp" size={15} />Registrar ingreso
+                    </button>
+                    <button className="btn btn-sm" onClick={() => { onNav('add'); setSubAdd(false); }} style={{
+                      justifyContent:'flex-start', gap:10, borderRadius:9,
+                      background: view==='add' ? 'var(--primary-tint)' : 'transparent',
+                      color: view==='add' ? 'var(--primary)' : 'var(--text-2)',
+                      fontWeight: view==='add' ? 700 : 600,
+                    }}>
+                      <Icon name="arrowDown" size={15} />Registrar gasto
                     </button>
                   </div>
                 )}
