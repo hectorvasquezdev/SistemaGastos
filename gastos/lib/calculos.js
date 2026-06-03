@@ -1,11 +1,12 @@
 export const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-export const METHODS = ['Yape', 'Efectivo', 'Tarjeta', 'Transferencia', 'Otro'];
+export const METHODS = ['Yape', 'Efectivo', 'Tarjeta de débito', 'Tarjeta de crédito', 'Transferencia', 'Otro'];
 export const METHOD_META = {
-  'Yape':          { color: '#7d3cf3', icon: '📲' },
-  'Efectivo':      { color: '#4d7c0f', icon: '💵' },
-  'Tarjeta':       { color: '#2563eb', icon: '💳' },
-  'Transferencia': { color: '#0f766e', icon: '🏦' },
-  'Otro':          { color: '#64748b', icon: '•' },
+  'Yape':               { color: '#7d3cf3', icon: '📲' },
+  'Efectivo':           { color: '#4d7c0f', icon: '💵' },
+  'Tarjeta de débito':  { color: '#2563eb', icon: '💳' },
+  'Tarjeta de crédito': { color: '#dc2626', icon: '💳' },
+  'Transferencia':      { color: '#0f766e', icon: '🏦' },
+  'Otro':               { color: '#64748b', icon: '•' },
 };
 
 export function money(n, dec = 2) {
@@ -19,7 +20,10 @@ export function money0(n) {
 
 export function stats({ incomes, categories, expenses, month, year }) {
   const exp = expenses.filter(e => {
-    const d = new Date((e.date || e.spent_at) + 'T00:00');
+    const billingDate = e.method === 'Tarjeta de crédito' && e.payment_date
+      ? e.payment_date
+      : (e.date || e.spent_at);
+    const d = new Date(billingDate + 'T00:00');
     return d.getMonth() === month && d.getFullYear() === year;
   });
 
@@ -63,7 +67,11 @@ export function stats({ incomes, categories, expenses, month, year }) {
   const daily = [];
   let cum = 0;
   for (let d = 1; d <= lastDay; d++) {
-    const dayExp = exp.filter(e => new Date((e.date || e.spent_at) + 'T00:00').getDate() === d && e.category !== 'ahorro');
+    const dayExp = exp.filter(e => {
+      const billingDate = e.method === 'Tarjeta de crédito' && e.payment_date
+        ? e.payment_date : (e.date || e.spent_at);
+      return new Date(billingDate + 'T00:00').getDate() === d && e.category !== 'ahorro';
+    });
     const g = dayExp.reduce((s, e) => s + Number(e.amount), 0);
     cum += g;
     daily.push({ day: d, amount: g, cum, available: income - cum - ahorroReal });

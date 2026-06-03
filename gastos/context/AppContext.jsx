@@ -27,10 +27,11 @@ export function AppProvider({ children }) {
   const [month, setMonthState] = useState(now.getMonth());
   const [year,  setYearState]  = useState(now.getFullYear());
 
-  const [incomes,      setIncomes]      = useState([]);
-  const [categories,   setCategories]   = useState([]);
-  const [expenses,     setExpenses]     = useState([]);
-  const [achievements, setAchievements] = useState([]);
+  const [incomes,           setIncomes]           = useState([]);
+  const [categories,        setCategories]        = useState([]);
+  const [expenses,          setExpenses]          = useState([]);
+  const [billableExpenses,  setBillableExpenses]  = useState([]);
+  const [achievements,      setAchievements]      = useState([]);
 
   // ── helpers ────────────────────────────────────────────────────
   const slugFromId = useCallback((catId, cats) =>
@@ -79,19 +80,32 @@ export function AppProvider({ children }) {
       setCategories(catsWithBudget);
 
       // 3. incomes + expenses + achievements in parallel
-      const [incs, exps, logros] = await Promise.all([
+      const [incs, exps, creditExps, logros] = await Promise.all([
         store.getIngresos(m, y),
         store.getGastos(m, y),
+        store.getCreditCardByPaymentDate(m, y),
         store.getLogros(),
       ]);
 
       setIncomes(incs.map(i => ({ ...i, amount: Number(i.amount) })));
-      setExpenses(exps.map(e => ({
+
+      const mapExp = e => ({
         ...e,
         amount: Number(e.amount),
         date: e.spent_at,
         category: slugFromId(e.category_id, catsWithBudget),
-      })));
+      });
+      const mappedExps   = exps.map(mapExp);
+      const mappedCredit = creditExps.map(mapExp);
+
+      setExpenses(mappedExps);
+
+      // billable = gastos no-crédito por spent_at + gastos de crédito por payment_date
+      setBillableExpenses([
+        ...mappedExps.filter(e => e.method !== 'Tarjeta de crédito'),
+        ...mappedCredit,
+      ]);
+
       setAchievements(logros.map(l => l.achievement));
     } catch (err) {
       console.error('Error cargando datos:', err);
@@ -129,7 +143,7 @@ export function AppProvider({ children }) {
         loadData(session.user.id, month, year);
       } else {
         setUser(null); setProfile(null);
-        setIncomes([]); setCategories([]); setExpenses([]); setAchievements([]);
+        setIncomes([]); setCategories([]); setExpenses([]); setBillableExpenses([]); setAchievements([]);
       }
     });
     return () => subscription.unsubscribe();
@@ -144,8 +158,8 @@ export function AppProvider({ children }) {
 
   // ── derived stats (memoised) ───────────────────────────────────
   const s = useMemo(
-    () => calcStats({ incomes, categories, expenses, month, year }),
-    [incomes, categories, expenses, month, year]
+    () => calcStats({ incomes, categories, expenses: billableExpenses, month, year }),
+    [incomes, categories, billableExpenses, month, year]
   );
 
   // ── lookups ────────────────────────────────────────────────────
@@ -159,22 +173,31 @@ export function AppProvider({ children }) {
   const addExpense = useCallback(async (gasto) => {
     const cat = catById(gasto.category);
     const row = await store.addGasto({
-      category_id: cat?.id || null,
-      amount:      gasto.amount,
-      method:      gasto.method,
-      description: gasto.description || '',
-      comment:     gasto.comment    || '',
-      source:      'manual',
-      spent_at:    gasto.date,
+      category_id:  cat?.id || null,
+      amount:       gasto.amount,
+      method:       gasto.method,
+      description:  gasto.description || '',
+      comment:      gasto.comment    || '',
+      source:       'manual',
+      spent_at:     gasto.date,
+      payment_date: gasto.paymentDate || null,
     });
-    setExpenses(prev => [{
+    const newExp = {
       ...row,
       amount:   Number(row.amount),
       date:     row.spent_at,
       category: gasto.category,
-    }, ...prev]);
+    };
+    setExpenses(prev => [newExp, ...prev]);
+    // añadir a billable solo si corresponde al mes actual de facturación
+    const billingDate = row.method === 'Tarjeta de crédito' && row.payment_date
+      ? row.payment_date : row.spent_at;
+    const bd = new Date(billingDate + 'T00:00');
+    if (bd.getMonth() === month && bd.getFullYear() === year) {
+      setBillableExpenses(prev => [newExp, ...prev]);
+    }
     return row;
-  }, [catById]);
+  }, [catById, month, year]);
 
   const addExpenses = useCallback(async (lista) => {
     const rows = lista.map(g => {
@@ -196,22 +219,26 @@ export function AppProvider({ children }) {
   const updateExpense = useCallback(async (id, patch) => {
     const cat = patch.category ? catById(patch.category) : undefined;
     const dbPatch = {
-      ...(patch.amount    !== undefined && { amount: patch.amount }),
-      ...(patch.method               && { method: patch.method }),
+      ...(patch.amount      !== undefined && { amount: patch.amount }),
+      ...(patch.method                   && { method: patch.method }),
       ...(patch.description !== undefined && { description: patch.description }),
-      ...(patch.comment   !== undefined && { comment: patch.comment }),
-      ...(patch.date                 && { spent_at: patch.date }),
-      ...(cat                        && { category_id: cat.id }),
+      ...(patch.comment     !== undefined && { comment: patch.comment }),
+      ...(patch.date                     && { spent_at: patch.date }),
+      ...(patch.paymentDate !== undefined && { payment_date: patch.paymentDate || null }),
+      ...(cat                            && { category_id: cat.id }),
     };
     await store.updateGasto(id, dbPatch);
-    setExpenses(prev => prev.map(e => e.id === id
-      ? { ...e, ...patch, ...(patch.date && { spent_at: patch.date }) }
-      : e));
+    const applyPatch = e => e.id === id
+      ? { ...e, ...patch, ...(patch.date && { spent_at: patch.date }), ...(patch.paymentDate !== undefined && { payment_date: patch.paymentDate || null }) }
+      : e;
+    setExpenses(prev => prev.map(applyPatch));
+    setBillableExpenses(prev => prev.map(applyPatch));
   }, [catById]);
 
   const deleteExpense = useCallback(async (id) => {
     await store.deleteGasto(id);
     setExpenses(prev => prev.filter(e => e.id !== id));
+    setBillableExpenses(prev => prev.filter(e => e.id !== id));
   }, []);
 
   const setBudget = useCallback(async (catSlug, amount) => {

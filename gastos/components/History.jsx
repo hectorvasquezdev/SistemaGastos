@@ -90,7 +90,7 @@ export default function History() {
   const toggleSort = key => setSort(s => s.key===key ? { key, dir:s.dir==='asc'?'desc':'asc' } : { key, dir:'desc' });
   const fmtDate   = iso => new Date(iso+'T00:00').toLocaleDateString('es-PE', { day:'2-digit', month:'short' });
 
-  const METHOD_META = { Yape:'📲', Efectivo:'💵', Tarjeta:'💳', Transferencia:'🏦', Otro:'•' };
+  const METHOD_META = { Yape:'📲', Efectivo:'💵', 'Tarjeta de débito':'💳', 'Tarjeta de crédito':'💳', Transferencia:'🏦', Otro:'•' };
 
   return (
     <div className="view-in">
@@ -157,7 +157,14 @@ export default function History() {
                         </div>
                       </td>
                       <td style={tdStyle}><span className="pill" style={{ background:'var(--surface-3)' }}><span style={{ fontSize:14 }}>{c.icon}</span>{c.name}</span></td>
-                      <td style={tdStyle}><span className="row" style={{ gap:6, fontSize:13.5, fontWeight:600 }}><span>{METHOD_META[e.method]}</span>{e.method}</span></td>
+                      <td style={tdStyle}>
+                        <div className="col" style={{ gap:2 }}>
+                          <span className="row" style={{ gap:6, fontSize:13.5, fontWeight:600 }}><span>{METHOD_META[e.method]}</span>{e.method}</span>
+                          {e.method === 'Tarjeta de crédito' && e.payment_date && (
+                            <span className="tiny" style={{ color:'#dc2626' }}>Pago: {fmtDate(e.payment_date)}</span>
+                          )}
+                        </div>
+                      </td>
                       <td style={{ ...tdStyle, textAlign:'right' }}><span className="num" style={{ fontWeight:700, fontSize:14.5 }}>{money(e.amount)}</span></td>
                       <td style={{ ...tdStyle, textAlign:'right' }}>
                         <div className="row" style={{ gap:4, justifyContent:'flex-end' }}>

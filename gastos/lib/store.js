@@ -102,6 +102,18 @@ export async function getGastos(month, year) {
   if (error) throw error;
   return data;
 }
+
+export async function getCreditCardByPaymentDate(month, year) {
+  const desde = new Date(year, month, 1).toISOString().slice(0, 10);
+  const hasta = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('expenses').select('*')
+    .eq('method', 'Tarjeta de crédito')
+    .gte('payment_date', desde).lte('payment_date', hasta)
+    .order('spent_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
 export async function addGasto(gasto) {
   const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase
@@ -133,10 +145,15 @@ export async function getResumenMeses(meses) {
   const results = await Promise.all(meses.map(async ({ month, year }) => {
     const desde = new Date(year, month, 1).toISOString().slice(0, 10);
     const hasta = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-    const { data } = await supabase
-      .from('expenses').select('amount, category_id')
-      .gte('spent_at', desde).lte('spent_at', hasta);
-    const total   = (data || []).reduce((s, e) => s + Number(e.amount), 0);
+    const [{ data: normal }, { data: credit }] = await Promise.all([
+      supabase.from('expenses').select('id, amount')
+        .gte('spent_at', desde).lte('spent_at', hasta)
+        .neq('method', 'Tarjeta de crédito'),
+      supabase.from('expenses').select('id, amount')
+        .eq('method', 'Tarjeta de crédito')
+        .gte('payment_date', desde).lte('payment_date', hasta),
+    ]);
+    const total = [...(normal || []), ...(credit || [])].reduce((s, e) => s + Number(e.amount), 0);
     return { month, year, total };
   }));
   return results;

@@ -76,7 +76,7 @@ function Stat({ label, value, sub, tone }) {
   );
 }
 
-const METHOD_META = { Yape:'📲', Efectivo:'💵', Tarjeta:'💳', Transferencia:'🏦', Otro:'•' };
+const METHOD_META = { Yape:'📲', Efectivo:'💵', 'Tarjeta de débito':'💳', 'Tarjeta de crédito':'💳', Transferencia:'🏦', Otro:'•' };
 
 export default function Reports({ onNav }) {
   const { stats, monthLabel, money, money0 } = useApp();

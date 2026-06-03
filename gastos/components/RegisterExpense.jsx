@@ -8,11 +8,11 @@ import { useMascota } from './Mascota';
 const QUICK = [2, 5, 10, 20];
 
 function MethodChip({ m, active, onClick }) {
-  const meta = { Yape:{icon:'📲'}, Efectivo:{icon:'💵'}, Tarjeta:{icon:'💳'}, Transferencia:{icon:'🏦'}, Otro:{icon:'•'} };
+  const meta = { Yape:{icon:'📲'}, Efectivo:{icon:'💵'}, 'Tarjeta de débito':{icon:'💳'}, 'Tarjeta de crédito':{icon:'💳'}, Transferencia:{icon:'🏦'}, Otro:{icon:'•'} };
   return (
-    <button onClick={onClick} className="btn" style={{ flexDirection:'column', gap:5, padding:'12px 8px', borderRadius:14, flex:1, minWidth:78, background:active?'var(--primary-tint)':'var(--surface-2)', border:`1.5px solid ${active?'var(--primary)':'var(--border)'}`, color:active?'var(--primary)':'var(--text-2)' }}>
+    <button onClick={onClick} className="btn" style={{ flexDirection:'column', gap:5, padding:'12px 8px', borderRadius:14, width:'100%', background:active?'var(--primary-tint)':'var(--surface-2)', border:`1.5px solid ${active?'var(--primary)':'var(--border)'}`, color:active?'var(--primary)':'var(--text-2)' }}>
       <span style={{ fontSize:20 }}>{meta[m]?.icon}</span>
-      <span style={{ fontSize:12.5, fontWeight:700 }}>{m}</span>
+      <span style={{ fontSize:12, fontWeight:700, textAlign:'center', lineHeight:1.25 }}>{m}</span>
     </button>
   );
 }
@@ -20,16 +20,24 @@ function MethodChip({ m, active, onClick }) {
 export default function RegisterExpense({ onNav }) {
   const toast = useToast();
   const { reaccionar } = useMascota();
-  const { categories, addExpense, stats, catById, money, METHODS } = useApp();
+  const { categories, addExpense, stats, catById, money, METHODS, MONTH_NAMES } = useApp();
   const todayISO = new Date().toISOString().slice(0,10);
 
-  const [amount,   setAmount]   = useState('');
-  const [category, setCategory] = useState('alim');
-  const [method,   setMethod]   = useState('Yape');
-  const [date,     setDate]     = useState(todayISO);
-  const [desc,     setDesc]     = useState('');
-  const [comment,  setComment]  = useState('');
-  const [busy,     setBusy]     = useState(false);
+  const nextMonthFirst = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(1);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const [amount,      setAmount]      = useState('');
+  const [category,    setCategory]    = useState('alim');
+  const [method,      setMethod]      = useState('Yape');
+  const [date,        setDate]        = useState(todayISO);
+  const [paymentDate, setPaymentDate] = useState(nextMonthFirst);
+  const [desc,        setDesc]        = useState('');
+  const [comment,     setComment]     = useState('');
+  const [busy,        setBusy]        = useState(false);
 
   const amt = parseFloat(amount) || 0;
   const cat = catById(category);
@@ -37,24 +45,49 @@ export default function RegisterExpense({ onNav }) {
 
   const save = async (keepOpen) => {
     if (!amt) { toast({ emoji:'⚠️', title:'Ingresa un monto', type:'default' }); return; }
+    const isCreditCard = method === 'Tarjeta de crédito';
+    if (isCreditCard && !paymentDate) { toast({ emoji:'⚠️', title:'Ingresa la fecha de pago', type:'default' }); return; }
     setBusy(true);
     try {
-      // calcular ANTES de guardar para tener el estado actual
-      const cc = stats().byCat.find(c => c.slug === category);
-      const nuevoTotal = (cc?.spent || 0) + amt;
-      const nuevoPct   = cc?.budget ? Math.round(nuevoTotal / cc.budget * 100) : 0;
+      await addExpense({ amount: amt, category, method, date, description: desc || cat?.name, comment, paymentDate: isCreditCard ? paymentDate : null });
 
-      await addExpense({ amount: amt, category, method, date, description: desc || cat?.name, comment });
+      if (isCreditCard) {
+        const pd = new Date(paymentDate + 'T00:00');
+        const pdMonth = pd.getMonth();
+        const pdYear  = pd.getFullYear();
+        const now     = new Date();
+        const isDifferentMonth = pdMonth !== now.getMonth() || pdYear !== now.getFullYear();
+        if (isDifferentMonth) {
+          reaccionar('bien');
+          toast({ emoji:'💳', type:'good', title:`${money(amt)} registrado`,
+            msg: `Se contabilizará en ${MONTH_NAMES[pdMonth]} ${pdYear}.` });
+        } else {
+          const cc = stats().byCat.find(c => c.slug === category);
+          const nuevoTotal = (cc?.spent || 0) + amt;
+          const nuevoPct   = cc?.budget ? Math.round(nuevoTotal / cc.budget * 100) : 0;
+          if (category === 'ahorro') reaccionar('ahorro');
+          else if (nuevoPct > 100)   reaccionar('pasaste');
+          else if (nuevoPct >= 70)   reaccionar('cuidado');
+          else                       reaccionar('bien');
+          toast({ emoji:'✅', type:'good', title:`${money(amt)} en ${cat?.name}`,
+            msg: nuevoPct > 100 ? `Superaste el límite de ${cat?.name} este mes.`
+               : nuevoPct >= 70 ? `Llevas el ${nuevoPct}% del presupuesto de ${cat?.name}.`
+               : `Disponible en ${cat?.name}: ${money((cc?.budget||0) - nuevoTotal)}.` });
+        }
+      } else {
+        const cc = stats().byCat.find(c => c.slug === category);
+        const nuevoTotal = (cc?.spent || 0) + amt;
+        const nuevoPct   = cc?.budget ? Math.round(nuevoTotal / cc.budget * 100) : 0;
+        if (category === 'ahorro') reaccionar('ahorro');
+        else if (nuevoPct > 100)   reaccionar('pasaste');
+        else if (nuevoPct >= 70)   reaccionar('cuidado');
+        else                       reaccionar('bien');
+        toast({ emoji:'✅', type:'good', title:`${money(amt)} en ${cat?.name}`,
+          msg: nuevoPct > 100 ? `Superaste el límite de ${cat?.name} este mes.`
+             : nuevoPct >= 70 ? `Llevas el ${nuevoPct}% del presupuesto de ${cat?.name}.`
+             : `Disponible en ${cat?.name}: ${money((cc?.budget||0) - nuevoTotal)}.` });
+      }
 
-      if (category === 'ahorro') reaccionar('ahorro');
-      else if (nuevoPct > 100)   reaccionar('pasaste');
-      else if (nuevoPct >= 70)   reaccionar('cuidado');
-      else                       reaccionar('bien');
-
-      toast({ emoji:'✅', type:'good', title:`${money(amt)} en ${cat?.name}`,
-        msg: nuevoPct > 100 ? `Superaste el límite de ${cat?.name} este mes.`
-           : nuevoPct >= 70 ? `Llevas el ${nuevoPct}% del presupuesto de ${cat?.name}.`
-           : `Disponible en ${cat?.name}: ${money((cc?.budget||0) - nuevoTotal)}.` });
       setAmount(''); setDesc(''); setComment('');
       if (!keepOpen) onNav('dash');
     } catch(e) {
@@ -76,13 +109,13 @@ export default function RegisterExpense({ onNav }) {
 
       <div className="card card-pad col" style={{ gap:22 }}>
         {/* monto */}
-        <div className="col" style={{ alignItems:'center', gap:14, padding:'6px 0 4px' }}>
+        <div className="col" style={{ alignItems:'center', gap:14, padding:'14px 0 4px', overflow:'visible' }}>
           <span className="eyebrow">Monto del gasto</span>
           <div className="row" style={{ gap:6, alignItems:'baseline' }}>
             <span style={{ fontSize:32, fontWeight:700, color:'var(--muted)' }}>S/</span>
             <input autoFocus value={amount} onChange={e => setAmount(e.target.value.replace(/[^0-9.]/g,''))}
               placeholder="0.00" inputMode="decimal" className="num"
-              style={{ width: Math.max(120,(amount.length||4)*30), maxWidth:280, border:'none', background:'none', textAlign:'center', fontSize:54, fontWeight:800, letterSpacing:'-.03em', color:'var(--text)', outline:'none' }} />
+              style={{ width: Math.max(120,(amount.length||4)*30), maxWidth:280, border:'none', background:'none', textAlign:'center', fontSize:54, fontWeight:800, letterSpacing:'-.03em', color:'var(--text)', outline:'none', lineHeight:1.3, padding:'6px 0' }} />
           </div>
           <div className="row wrap" style={{ gap:8, justifyContent:'center' }}>
             {QUICK.map(v => (
@@ -98,7 +131,7 @@ export default function RegisterExpense({ onNav }) {
         {/* método */}
         <div className="field">
           <label className="label">Método de pago</label>
-          <div className="row wrap" style={{ gap:8 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8 }}>
             {METHODS.map(m => <MethodChip key={m} m={m} active={method===m} onClick={() => setMethod(m)} />)}
           </div>
         </div>
@@ -136,6 +169,16 @@ export default function RegisterExpense({ onNav }) {
           <label className="label">Fecha</label>
           <input type="date" className="input num" value={date} onChange={e => setDate(e.target.value)} max={todayISO} />
         </div>
+
+        {method === 'Tarjeta de crédito' && (
+          <div className="field" style={{ background:'color-mix(in srgb, #dc2626 8%, transparent)', border:'1px solid color-mix(in srgb, #dc2626 25%, transparent)', borderRadius:12, padding:'12px 14px' }}>
+            <label className="label" style={{ color:'#dc2626' }}>📅 Fecha de pago del monto</label>
+            <input type="date" className="input num" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} min={todayISO} />
+            <span className="tiny" style={{ marginTop:6, color:'var(--muted)', display:'block' }}>
+              El gasto se registra hoy visualmente, pero se contabilizará en el mes de esta fecha.
+            </span>
+          </div>
+        )}
 
         <div className="row" style={{ gap:10 }}>
           <button className="btn btn-primary btn-lg grow" onClick={() => save(false)} disabled={busy}>
